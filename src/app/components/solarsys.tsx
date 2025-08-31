@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useRef, useState, useEffect, Suspense, useMemo } from "react";
+import React, { useRef, useState, useEffect, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Line, Text, Html, Stars, useTexture } from "@react-three/drei";
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import Planet from "./planets";
 import type { Group } from "three";
 import { useRouter } from "next/navigation";
@@ -32,25 +33,30 @@ const planets: PlanetData[] = [
 const orbitRadii = planets.map((p) => p.radius);
 const initialCameraPosition = new THREE.Vector3(0, 30, 35);
 
-// --- UPDATED BACKGROUND COMPONENT ---
+// --- UPDATED BACKGROUND COMPONENT WITH QUALITY ENHANCEMENTS ---
 
 function SceneBackground() {
+  const { scene, gl } = useThree(); // Get the WebGL renderer instance
   const texture = useTexture('/textures/space4.jpg');
-  const bgRef = useRef<THREE.Mesh>(null!);
 
-  useFrame((state, delta) => {
-    // This creates the slow, subtle rotation of the background
-    if (bgRef.current) {
-      bgRef.current.rotation.y += delta * 0.005;
-    }
-  });
+  useEffect(() => {
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
 
-  return (
-    <mesh ref={bgRef} scale={[-1, 1, 1]}>
-      <sphereGeometry args={[500, 60, 40]} />
-      <meshBasicMaterial map={texture} side={THREE.BackSide} />
-    </mesh>
-  );
+    // --- TEXTURE QUALITY ENHANCEMENTS ---
+    // Use the maximum available anisotropy for sharper textures at glancing angles
+    texture.anisotropy = gl.capabilities.getMaxAnisotropy();
+    // Ensure linear filtering for smooth-looking textures
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    // Tell three.js that the texture needs to be updated with the new settings
+    texture.needsUpdate = true;
+
+    scene.background = texture;
+    scene.environment = texture;
+  }, [scene, texture, gl]);
+
+  return null;
 }
 
 
@@ -75,8 +81,8 @@ function Sun({ setFocusedPlanet }: { setFocusedPlanet: (label: string | null) =>
       <mesh
         ref={sunRef}
         onClick={() => setFocusedPlanet(null)}
-        onPointerOver={(e) => (document.body.style.cursor = 'pointer')}
-        onPointerOut={(e) => (document.body.style.cursor = 'auto')}
+        onPointerOver={() => (document.body.style.cursor = 'pointer')}
+        onPointerOut={() => (document.body.style.cursor = 'auto')}
       >
         <sphereGeometry args={[2.5, 32, 32]} />
         <meshBasicMaterial map={sunTexture} />
@@ -90,16 +96,7 @@ function Sun({ setFocusedPlanet }: { setFocusedPlanet: (label: string | null) =>
             depthWrite={false}
         />
       </sprite>
-      <Text 
-        position={[0, 3.5, 0]} 
-        fontSize={1.1} 
-        color="#fff" 
-        anchorX="center" 
-        anchorY="middle" 
-        outlineColor="#000" 
-        outlineWidth={0.05}
-        material-depthTest={false} // <-- ADDED THIS
-      >
+      <Text position={[0, 3.5, 0]} fontSize={1.1} color="#fff" anchorX="center" anchorY="middle" outlineColor="#000" outlineWidth={0.05}>
         HOME
       </Text>
     </group>
@@ -131,8 +128,8 @@ function OrbitingPlanet({ planet, focusedPlanet, setFocusedPlanet }: { planet: P
       ref={groupRef}
       name={planet.label}
       onClick={(e) => { e.stopPropagation(); setFocusedPlanet(planet.label); }}
-      onPointerOver={(e) => (document.body.style.cursor = 'pointer')}
-      onPointerOut={(e) => (document.body.style.cursor = 'auto')}
+      onPointerOver={() => (document.body.style.cursor = 'pointer')}
+      onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       <Planet
         textureFile={planet.textureFile}
@@ -150,7 +147,6 @@ function OrbitingPlanet({ planet, focusedPlanet, setFocusedPlanet }: { planet: P
         outlineColor="#000"
         outlineWidth={0.03}
         visible={focusedPlanet !== planet.label}
-        material-depthTest={false} // <-- ADDED THIS
       >
         {planet.label}
       </Text>
@@ -160,10 +156,8 @@ function OrbitingPlanet({ planet, focusedPlanet, setFocusedPlanet }: { planet: P
             onPointerDown={(e) => e.stopPropagation()}
             className="relative text-white w-80 rounded-2xl p-6 bg-black/60 backdrop-blur-md border border-white/10 shadow-2xl overflow-hidden"
           >
-            {/* Subtle glow effect */}
             <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-red-500/30 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 w-48 h-48 bg-blue-500/30 rounded-full blur-3xl"></div>
-            
             <div className="relative z-10 text-center">
               <h2 className="text-2xl font-bold mb-3 tracking-wide">{planet.label}</h2>
               <p className="text-sm text-slate-300 mb-6">{planet.description}</p>
@@ -181,7 +175,7 @@ function OrbitingPlanet({ planet, focusedPlanet, setFocusedPlanet }: { planet: P
   );
 }
 
-function CameraController({ focusedPlanet, controls, isAnimating, setIsAnimating }: { focusedPlanet: string | null, controls: React.RefObject<any>, isAnimating: boolean, setIsAnimating: (isAnimating: boolean) => void }) {
+function CameraController({ focusedPlanet, controls, isAnimating, setIsAnimating }: { focusedPlanet: string | null, controls: React.RefObject<OrbitControlsImpl | undefined>, isAnimating: boolean, setIsAnimating: (isAnimating: boolean) => void }) {
   const { scene, camera } = useThree();
   useFrame(() => {
     if (!controls.current || !isAnimating) return;
@@ -223,7 +217,7 @@ function createOrbitPoints(radius: number, segments = 128): [number, number, num
 export default function SolarSystem(): JSX.Element {
   const [focusedPlanet, setFocusedPlanet] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const controlsRef = useRef<any>();
+  const controlsRef = useRef<OrbitControlsImpl>();
 
   useEffect(() => { setIsAnimating(true); }, [focusedPlanet]);
   useEffect(() => {

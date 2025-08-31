@@ -2,24 +2,21 @@
 
 import React from "react";
 import { useTexture } from "@react-three/drei";
-import * as THREE from 'three';
 
 type PlanetProps = {
+  textureFile: string;
   size: number;
   position: [number, number, number];
-  textureFile: string;
   metalness?: number;
   roughness?: number;
 };
 
-export default function Planet({ size, position, textureFile, metalness = 0.5, roughness = 0.5 }: PlanetProps): JSX.Element {
-  // useTexture preloads the image and applies it as a texture
+export default function Planet({ textureFile, size, position, metalness = 0.5, roughness = 0.5 }: PlanetProps): JSX.Element {
   const texture = useTexture(textureFile);
 
   return (
     <mesh position={position}>
-      <sphereGeometry args={[size, 64, 64]} />
-      {/* The 'map' property applies the texture to the material */}
+      <sphereGeometry args={[size, 32, 32]} />
       <meshStandardMaterial 
         map={texture} 
         metalness={metalness} 
@@ -28,4 +25,3 @@ export default function Planet({ size, position, textureFile, metalness = 0.5, r
     </mesh>
   );
 }
-
