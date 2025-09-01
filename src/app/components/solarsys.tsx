@@ -103,8 +103,7 @@ function Sun({ setFocusedPlanet }: { setFocusedPlanet: (label: string | null) =>
   );
 }
 
-
-function OrbitingPlanet({ planet, focusedPlanet, setFocusedPlanet }: { planet: PlanetData; focusedPlanet: string | null; setFocusedPlanet: (label: string | null) => void; }): JSX.Element {
+function OrbitingPlanet({ planet, focusedPlanet, setFocusedPlanet }: { planet: PlanetData; focusedPlanet: string | null; setFocusedPlanet: (label: string | null) => void; }): React.ReactElement {
   const groupRef = useRef<Group | null>(null);
   const router = useRouter();
 
@@ -214,7 +213,7 @@ function createOrbitPoints(radius: number, segments = 128): [number, number, num
   return pts;
 }
 
-export default function SolarSystem(): JSX.Element {
+export default function SolarSystem(): React.ReactElement {
   const [focusedPlanet, setFocusedPlanet] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const controlsRef = useRef<OrbitControlsImpl>();

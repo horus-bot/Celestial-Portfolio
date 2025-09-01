@@ -11,7 +11,7 @@ type PlanetProps = {
   roughness?: number;
 };
 
-export default function Planet({ textureFile, size, position, metalness = 0.5, roughness = 0.5 }: PlanetProps): JSX.Element {
+export default function Planet({ textureFile, size, position, metalness = 0.5, roughness = 0.5 }: PlanetProps): React.ReactElement {
   const texture = useTexture(textureFile);
 
   return (
